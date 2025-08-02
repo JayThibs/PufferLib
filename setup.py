@@ -2,6 +2,11 @@
 #    DEBUG=1 python setup.py build_ext --inplace --force
 #    CUDA_VISIBLE_DEVICES=None LD_PRELOAD=$(gcc -print-file-name=libasan.so) python3.12 -m pufferlib.clean_pufferl eval --train.device cpu
 
+# Installation on Mac with Apple Silicon (M1/M2/M3/M4):
+# NO_TRAIN=1 uv pip install --no-build-isolation -v .
+# This avoids PyTorch version mismatches and skips optional CUDA extensions
+# After installation, use --train.device mps for GPU acceleration
+
 from setuptools import find_packages, find_namespace_packages, setup, Extension
 import numpy
 import os

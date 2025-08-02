@@ -3,7 +3,6 @@ import numpy as np
 import functools
 
 import pufferlib
-from pufferlib import namespace
 import pufferlib.emulation
 import pufferlib.environments
 
@@ -48,9 +47,5 @@ def make(
         env = OpenSpielGymnasiumEnvironment(**kwargs)
         wrapper_cls = pufferlib.emulation.GymnasiumPufferEnv
 
-    return wrapper_cls(
-        env=env,
-        postprocessor_cls=pufferlib.emulation.BasicPostprocessor,
-        buf=buf,
-    )
+    return wrapper_cls(env=env, buf=buf)
 

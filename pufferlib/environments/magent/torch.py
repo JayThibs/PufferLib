@@ -3,15 +3,15 @@ from torch import nn
 import pufferlib.models
 
 
-class Policy(pufferlib.models.Policy):
+class Policy(nn.Module):
     '''Based off of the DQN policy in MAgent'''
     def __init__(self, env, hidden_size=256, output_size=256, kernel_num=32):
         '''The CleanRL default Atari policy: a stack of three convolutions followed by a linear layer
         
         Takes framestack as a mandatory keyword arguments. Suggested default is 1 frame
         with LSTM or 4 frames without.'''
-        super().__init__(env)
-        self.num_actions = self.action_space.n
+        super().__init__()
+        self.num_actions = env.single_action_space.n
 
         self.network = nn.Sequential(
             pufferlib.pytorch.layer_init(nn.Conv2d(5, kernel_num, 3)),

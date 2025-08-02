@@ -9,7 +9,7 @@ import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
 import pufferlib.utils
-
+import pufferlib.postprocess
 
 
 def env_creator(name='SlimeVolley-v0'):
@@ -26,7 +26,7 @@ def make(name, render_mode='rgb_array', buf=None):
     env = SlimeVolleyMultiDiscrete(env)
     env = SkipWrapper(env, repeat_count=4)
     env = shimmy.GymV21CompatibilityV0(env=env)
-    env = pufferlib.EpisodeStats(env)
+    env = pufferlib.postprocess.EpisodeStats(env)
     return pufferlib.emulation.GymnasiumPufferEnv(env=env, buf=buf)
 
 class SlimeVolleyMultiDiscrete(gym.Wrapper):

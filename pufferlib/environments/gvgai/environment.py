@@ -8,7 +8,7 @@ import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
 import pufferlib.utils
-
+import pufferlib.postprocess
 import pufferlib.wrappers
 
 def env_creator(name='zelda'):
@@ -22,7 +22,7 @@ def make(name, obs_type='grayscale', frameskip=4, full_action_space=False,
     pufferlib.environments.try_import('gym_gvgai')
     env = gym.make(name)
     env = pufferlib.wrappers.GymToGymnasium(env)
-    env = pufferlib.EpisodeStats(env)
+    env = pufferlib.postprocess.EpisodeStats(env)
     env = pufferlib.emulation.GymnasiumPufferEnv(env=env, buf=buf)
     return env
 

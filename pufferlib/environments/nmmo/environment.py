@@ -6,7 +6,7 @@ import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
 import pufferlib.wrappers
-
+import pufferlib.postprocess
 
 
 def env_creator(name='nmmo'):
@@ -17,7 +17,7 @@ def make(name, *args, buf=None, **kwargs):
     nmmo = pufferlib.environments.try_import('nmmo')
     env = nmmo.Env(*args, **kwargs)
     env = NMMOWrapper(env)
-    env = pufferlib.MultiagentEpisodeStats(env)
+    env = pufferlib.postprocess.MultiagentEpisodeStats(env)
     env = pufferlib.postprocess.MeanOverAgents(env)
     return pufferlib.emulation.PettingZooPufferEnv(env=env, buf=buf)
 

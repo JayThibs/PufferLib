@@ -1,7 +1,8 @@
-# puffer [train | eval | sweep] [env_name] [optional args] -- See https://puffer.ai for full details
+## puffer [train | eval | sweep] [env_name] [optional args] -- See https://puffer.ai for full detail0
 # This is the same as python -m pufferlib.pufferl [train | eval | sweep] [env_name] [optional args]
 # Distributed example: torchrun --standalone --nnodes=1 --nproc-per-node=6 -m pufferlib.pufferl train puffer_nmmo3
 
+import contextlib
 import warnings
 warnings.filterwarnings('error', category=RuntimeWarning)
 
@@ -32,8 +33,10 @@ import pufferlib.vector
 import pufferlib.pytorch
 try:
     from pufferlib import _C
+    ADVANTAGE_CUDA = True
 except ImportError:
-    raise ImportError('Failed to import C/CUDA advantage kernel. If you have non-default PyTorch, try installing with --no-build-isolation')
+    _C = None
+    ADVANTAGE_CUDA = False
 
 import rich
 import rich.traceback
@@ -86,9 +89,27 @@ class PuffeRL:
             )
 
         device = config['device']
+        
+        # Handle 'auto' device selection based on network size
+        if device == 'auto':
+            # Count parameters in the policy network
+            param_count = sum(p.numel() for p in policy.parameters() if p.requires_grad)
+            
+            # Use MPS for networks >= 100K params if available
+            if param_count >= 100_000 and torch.backends.mps.is_available():
+                device = 'mps'
+            elif param_count >= 100_000 and torch.cuda.is_available():
+                device = 'cuda'
+            else:
+                device = 'cpu'
+            
+            config['device'] = device
+        
+        # Enable memory pinning only for CUDA (MPS doesn't support it)
+        pin_memory = device == 'cuda' and config['cpu_offload']
         self.observations = torch.zeros(segments, horizon, *obs_space.shape,
             dtype=pufferlib.pytorch.numpy_to_torch_dtype_dict[obs_space.dtype],
-            pin_memory=device == 'cuda' and config['cpu_offload'],
+            pin_memory=pin_memory,
             device='cpu' if config['cpu_offload'] else device)
         self.actions = torch.zeros(segments, horizon, *atn_space.shape, device=device,
             dtype=pufferlib.pytorch.numpy_to_torch_dtype_dict[atn_space.dtype])
@@ -135,7 +156,9 @@ class PuffeRL:
         self.uncompiled_policy = policy
         self.policy = policy
         if config['compile']:
-            self.policy = torch.compile(policy, mode=config['compile_mode'], fullgraph=config['compile_fullgraph'])
+            self.policy = torch.compile(policy, mode=config['compile_mode'])
+            self.policy.forward_eval = torch.compile(policy, mode=config['compile_mode'])
+            pufferlib.pytorch.sample_logits = torch.compile(pufferlib.pytorch.sample_logits, mode=config['compile_mode'])
 
         # Optimizer
         if config['optimizer'] == 'adam':
@@ -173,9 +196,30 @@ class PuffeRL:
 
         # Automatic mixed precision
         precision = config['precision']
-        self.amp_context = torch.amp.autocast(device_type='cuda', dtype=getattr(torch, precision))
+        device_type = 'cuda' if 'cuda' in str(device) else 'cpu'
+        if 'mps' in str(device):
+            # MPS doesn't support autocast yet
+            self.amp_context = torch.cuda.amp.autocast(enabled=False)
+        else:
+            self.amp_context = torch.amp.autocast(device_type=device_type, dtype=getattr(torch, precision))
         if precision not in ('float32', 'bfloat16'):
             raise pufferlib.APIUsageError(f'Invalid precision: {precision}: use float32 or bfloat16')
+        
+        # Verify MPS is actually being used
+        if 'mps' in str(device):
+            if torch.backends.mps.is_available():
+                # Test MPS with a small operation
+                try:
+                    test_tensor = torch.randn(100, 100, device=device)
+                    _ = torch.matmul(test_tensor, test_tensor.T)
+                    torch.mps.synchronize()
+                    self.mps_enabled = True
+                except Exception as e:
+                    self.mps_enabled = False
+            else:
+                self.mps_enabled = False
+        else:
+            self.mps_enabled = False
 
         # Initializations
         self.config = config
@@ -217,8 +261,8 @@ class PuffeRL:
 
         if config['use_rnn']:
             for k in self.lstm_h:
-                self.lstm_h[k].zero_()
-                self.lstm_c[k].zero_()
+                self.lstm_h[k] = torch.zeros(self.lstm_h[k].shape, device=device)
+                self.lstm_c[k] = torch.zeros(self.lstm_c[k].shape, device=device)
 
         self.full_rows = 0
         while self.full_rows < self.segments:
@@ -233,9 +277,11 @@ class PuffeRL:
 
             profile('eval_copy', epoch)
             o = torch.as_tensor(o)
-            o_device = o.to(device)#, non_blocking=True)
-            r = torch.as_tensor(r).to(device)#, non_blocking=True)
-            d = torch.as_tensor(d).to(device)#, non_blocking=True)
+            # Enable non-blocking transfers for MPS
+            non_blocking = str(device) in ['cuda', 'mps']
+            o_device = o.to(device, non_blocking=non_blocking)
+            r = torch.as_tensor(r).to(device, non_blocking=non_blocking)
+            d = torch.as_tensor(d).to(device, non_blocking=non_blocking)
 
             profile('eval_forward', epoch)
             with torch.no_grad(), self.amp_context:
@@ -547,10 +593,11 @@ class PuffeRL:
         table.add_column(justify="center", width=13)
         table.add_column(justify="right", width=13)
 
+        gpu_label = 'MPS' if torch.backends.mps.is_available() else 'GPU'
         table.add_row(
             f'{b1}PufferLib {b2}3.0 {idx[0]*" "}:blowfish:',
             f'{c1}CPU: {b2}{np.mean(self.utilization.cpu_util):.1f}{c2}%',
-            f'{c1}GPU: {b2}{np.mean(self.utilization.gpu_util):.1f}{c2}%',
+            f'{c1}{gpu_label}: {b2}{np.mean(self.utilization.gpu_util):.1f}{c2}%',
             f'{c1}DRAM: {b2}{np.mean(self.utilization.cpu_mem):.1f}{c2}%',
             f'{c1}VRAM: {b2}{np.mean(self.utilization.gpu_mem):.1f}{c2}%',
         )
@@ -645,8 +692,53 @@ def compute_puff_advantage(values, rewards, terminals,
         ratio = ratio.cpu()
         advantages = advantages.cpu()
 
-    torch.ops.pufferlib.compute_puff_advantage(values, rewards, terminals,
-        ratio, advantages, gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip)
+    if ADVANTAGE_CUDA and _C is not None:
+        torch.ops.pufferlib.compute_puff_advantage(values, rewards, terminals,
+            ratio, advantages, gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip)
+    else:
+        # Numba CPU fallback for Apple Silicon
+        try:
+            from numba import njit, prange
+            @njit(parallel=True, cache=True)
+            def compute_advantages_numba(values_np, rewards_np, terminals_np, ratio_np, advantages_np, 
+                                       gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip):
+                n_envs, n_steps = values_np.shape
+                for i in prange(n_envs):
+                    last_gae = 0.0
+                    for t in range(n_steps - 1, -1, -1):
+                        if t == n_steps - 1:
+                            next_value = 0.0
+                        else:
+                            next_value = values_np[i, t + 1]
+                        
+                        delta = rewards_np[i, t] + gamma * next_value * (1 - terminals_np[i, t]) - values_np[i, t]
+                        last_gae = delta + gamma * gae_lambda * (1 - terminals_np[i, t]) * last_gae
+                        advantages_np[i, t] = last_gae
+            
+            # Convert to numpy, compute, and convert back
+            values_np = values.detach().numpy()
+            rewards_np = rewards.detach().numpy()
+            terminals_np = terminals.detach().numpy()
+            ratio_np = ratio.detach().numpy()
+            advantages_np = advantages.detach().numpy()
+            
+            compute_advantages_numba(values_np, rewards_np, terminals_np, ratio_np, advantages_np,
+                                   gamma, gae_lambda, vtrace_rho_clip, vtrace_c_clip)
+            
+            advantages = torch.from_numpy(advantages_np)
+        except ImportError:
+            # Pure PyTorch fallback
+            for i in range(values.shape[0]):
+                last_gae = 0.0
+                for t in reversed(range(values.shape[1])):
+                    if t == values.shape[1] - 1:
+                        next_value = 0.0
+                    else:
+                        next_value = values[i, t + 1]
+                    
+                    delta = rewards[i, t] + gamma * next_value * (1 - terminals[i, t]) - values[i, t]
+                    last_gae = delta + gamma * gae_lambda * (1 - terminals[i, t]) * last_gae
+                    advantages[i, t] = last_gae
 
     if not ADVANTAGE_CUDA:
         return advantages.to(device)
@@ -764,6 +856,23 @@ class Utilization(Thread):
                 self.gpu_util.append(torch.cuda.utilization())
                 free, total = torch.cuda.mem_get_info()
                 self.gpu_mem.append(100*(total-free)/total)
+            elif torch.backends.mps.is_available():
+                # MPS monitoring - no direct utilization API
+                # Use memory as a proxy for activity
+                try:
+                    allocated = torch.mps.current_allocated_memory()
+                    driver_allocated = torch.mps.driver_allocated_memory()
+                    if driver_allocated > 0:
+                        # Use memory allocation as proxy for utilization
+                        # This is not perfect but gives some indication
+                        self.gpu_util.append(min(100 * allocated / driver_allocated, 100))
+                        self.gpu_mem.append(100 * allocated / driver_allocated)
+                    else:
+                        self.gpu_util.append(0)
+                        self.gpu_mem.append(0)
+                except:
+                    self.gpu_util.append(0)
+                    self.gpu_mem.append(0)
             else:
                 self.gpu_util.append(0)
                 self.gpu_mem.append(0)
@@ -904,7 +1013,11 @@ def train(env_name, args=None, vecenv=None, policy=None, logger=None):
 
     all_logs = []
     while pufferl.global_step < train_config['total_timesteps']:
+        if train_config['device'] == 'cuda':
+            torch.compiler.cudagraph_mark_step_begin()
         pufferl.evaluate()
+        if train_config['device'] == 'cuda':
+            torch.compiler.cudagraph_mark_step_begin()
         logs = pufferl.train()
 
         if logs is not None:

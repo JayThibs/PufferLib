@@ -1,7 +1,6 @@
 from pdb import set_trace as T
 
 import numpy as np
-from collections import OrderedDict
 
 import pufferlib
 import pufferlib.emulation
@@ -128,7 +127,7 @@ def test_gymnasium_emulation(env_cls, steps=100):
             puf_ob = pufferlib.emulation.nativize(
                 puf_ob, puf_env.env.observation_space, puf_env.obs_dtype)
 
-        compare_space_samples(raw_ob, puf_ob)
+        pufferlib.utils.compare_space_samples(raw_ob, puf_ob)
 
         action = raw_env.action_space.sample()
         raw_ob, raw_reward, raw_done, raw_truncated, _ = raw_env.step(action)
@@ -168,7 +167,7 @@ def test_pettingzoo_emulation(env_cls, steps=100):
                 puf_ob = pufferlib.emulation.nativize(
                     puf_ob, puf_env.env.single_observation_space, puf_env.obs_dtype)
             
-            assert compare_space_samples(raw_ob, puf_ob)
+            assert pufferlib.utils.compare_space_samples(raw_ob, puf_ob)
 
         raw_actions = {a: raw_env.action_space(a).sample()
             for a in raw_env.agents}

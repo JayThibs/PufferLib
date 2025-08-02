@@ -6,7 +6,6 @@ import random
 import sys
 
 import pufferlib
-import pufferlib.exceptions
 import pufferlib.emulation
 import pufferlib.environments
 

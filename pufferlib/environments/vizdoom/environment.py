@@ -8,7 +8,6 @@ import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
 import pufferlib.utils
-import pufferlib.postprocess
 
 
 def env_creator(name='doom'):

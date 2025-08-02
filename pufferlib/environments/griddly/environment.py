@@ -7,7 +7,6 @@ import functools
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.postprocess
 
 ALIASES = {
     'spiders': 'GDY-Spiders-v0',
@@ -33,5 +32,5 @@ def make(name, buf=None):
         env.reset() # Populate observation space
 
     env = shimmy.GymV21CompatibilityV0(env=env)
-    env = pufferlib.postprocess.EpisodeStats(env)
+    env = pufferlib.EpisodeStats(env)
     return pufferlib.emulation.GymnasiumPufferEnv(env, buf=buf)

@@ -37,6 +37,16 @@ try:
 except ImportError:
     _C = None
     ADVANTAGE_CUDA = False
+    # Provide helpful error message for non-Mac users
+    import platform
+    if platform.system() != 'Darwin':
+        import warnings
+        warnings.warn(
+            'Failed to import C/CUDA advantage kernel. '
+            'If you have non-default PyTorch, try installing with --no-build-isolation. '
+            'Otherwise, make sure you have nvcc installed for CUDA support.',
+            RuntimeWarning
+        )
 
 import rich
 import rich.traceback
@@ -47,9 +57,6 @@ rich.traceback.install(show_locals=False)
 
 import signal # Aggressively exit on ctrl+c
 signal.signal(signal.SIGINT, lambda sig, frame: os._exit(0))
-
-# Assume advantage kernel has been built if CUDA compiler is available
-ADVANTAGE_CUDA = shutil.which("nvcc") is not None
 
 class PuffeRL:
     def __init__(self, config, vecenv, policy, logger=None):

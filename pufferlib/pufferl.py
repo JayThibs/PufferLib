@@ -190,7 +190,7 @@ class PuffeRL:
             self.logger = NoLogger(config)
 
         # Learning rate scheduler
-        epochs = config['total_timesteps'] // config['batch_size']
+        epochs = max(1, config['total_timesteps'] // config['batch_size'])
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
         self.total_epochs = epochs
 
@@ -199,7 +199,7 @@ class PuffeRL:
         device_type = 'cuda' if 'cuda' in str(device) else 'cpu'
         if 'mps' in str(device):
             # MPS doesn't support autocast yet
-            self.amp_context = torch.cuda.amp.autocast(enabled=False)
+            self.amp_context = torch.amp.autocast(device_type='cpu', enabled=False)
         else:
             self.amp_context = torch.amp.autocast(device_type=device_type, dtype=getattr(torch, precision))
         if precision not in ('float32', 'bfloat16'):

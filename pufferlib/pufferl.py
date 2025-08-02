@@ -1194,6 +1194,16 @@ def load_policy(args, vecenv, env_name=''):
         rnn_cls = getattr(env_module.torch, args['rnn_name'])
         policy = rnn_cls(vecenv.driver_env, policy, **args['rnn'])
 
+    # Handle 'auto' device selection based on network size
+    if device == 'auto':
+        param_count = sum(p.numel() for p in policy.parameters() if p.requires_grad)
+        if param_count >= 100_000 and torch.backends.mps.is_available():
+            device = 'mps'
+        elif param_count >= 100_000 and torch.cuda.is_available():
+            device = 'cuda'
+        else:
+            device = 'cpu'
+    
     policy = policy.to(device)
 
     load_id = args['load_id']

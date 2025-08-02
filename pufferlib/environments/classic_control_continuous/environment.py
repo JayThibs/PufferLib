@@ -3,7 +3,7 @@ import functools
 
 import pufferlib
 import pufferlib.emulation
-import pufferlib.postprocess
+
 
 
 def env_creator(name='MountainCarContinuous-v0'):
@@ -16,7 +16,7 @@ def make(name, render_mode='rgb_array', buf=None):
         env = MountainCarWrapper(env)
 
     env = pufferlib.postprocess.ClipAction(env)
-    env = pufferlib.postprocess.EpisodeStats(env)
+    env = pufferlib.EpisodeStats(env)
     return pufferlib.emulation.GymnasiumPufferEnv(env=env, buf=buf)
 
 class MountainCarWrapper(gymnasium.Wrapper):

@@ -8,7 +8,7 @@ import functools
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.postprocess
+
 import pufferlib.utils
 
 
@@ -30,7 +30,7 @@ def make(name, buf=None):
     env = shimmy.GymV21CompatibilityV0(env=env)
     env = RenderWrapper(env)
     env = TransposeObs(env)
-    env = pufferlib.postprocess.EpisodeStats(env)
+    env = pufferlib.EpisodeStats(env)
     return pufferlib.emulation.GymnasiumPufferEnv(env=env, buf=buf)
 
 class RenderWrapper(gym.Wrapper):

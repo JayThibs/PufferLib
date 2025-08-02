@@ -35,18 +35,11 @@ try:
     from pufferlib import _C
     ADVANTAGE_CUDA = True
 except ImportError:
-    _C = None
-    ADVANTAGE_CUDA = False
-    # Provide helpful error message for non-Mac users
     import platform
     if platform.system() != 'Darwin':
-        import warnings
-        warnings.warn(
-            'Failed to import C/CUDA advantage kernel. '
-            'If you have non-default PyTorch, try installing with --no-build-isolation. '
-            'Otherwise, make sure you have nvcc installed for CUDA support.',
-            RuntimeWarning
-        )
+        raise ImportError('Failed to import C/CUDA advantage kernel. If you have non-default PyTorch, try installing with --no-build-isolation')
+    _C = None
+    ADVANTAGE_CUDA = False
 
 import rich
 import rich.traceback

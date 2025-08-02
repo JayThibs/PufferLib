@@ -7,7 +7,6 @@ import gymnasium as gym
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.utils
 
 
 def env_creator(name='doom'):
@@ -29,7 +28,7 @@ def make(name, framestack=1, render_mode='rgb_array', buf=None):
     # Make does not work without this imported
     # TODO: Fix try_import
     from vizdoom import gymnasium_wrapper
-    with pufferlib.utils.Suppress():
+    with pufferlib.Suppress():
         env = gym.make(name, render_mode=render_mode)
 
     env = DoomWrapper(env) # Don't use standard postprocessor

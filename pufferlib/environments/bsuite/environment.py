@@ -3,7 +3,6 @@ import gym
 import functools
 
 import pufferlib.emulation
-import pufferlib.wrappers
 
 import bsuite
 from bsuite.utils import gym_wrapper
@@ -18,7 +17,7 @@ def make(name='bandit/0', results_dir='experiments/bsuite', overwrite=True, buf=
     env = bsuite.load_and_record_to_csv(name, results_dir, overwrite=overwrite)
     env = gym_wrapper.GymFromDMEnv(env)
     env = BSuiteStopper(env)
-    env = pufferlib.wrappers.GymToGymnasium(env)
+    env = pufferlib.GymToGymnasium(env)
     env = pufferlib.emulation.GymnasiumPufferEnv(env, buf=buf)
     return env
 

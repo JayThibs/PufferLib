@@ -23,11 +23,11 @@ def make(name, buf=None):
     else:
         raise ValueError(f'Unknown environment: {name}')
 
-    with pufferlib.utils.Suppress():
+    with pufferlib.Suppress():
         return GlobalAgentCombinedRewardEnv()
 
-    env.reset = pufferlib.utils.silence_warnings(env.reset)
-    env.step = pufferlib.utils.silence_warnings(env.step)
+    env.reset = pufferlib.silence_warnings(env.reset)
+    env.step = pufferlib.silence_warnings(env.step)
 
     env = MicroRTS(env)
     env = shimmy.GymV21CompatibilityV0(env=env)

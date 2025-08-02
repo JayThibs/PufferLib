@@ -27,7 +27,7 @@ def make(name, buf=None):
     import warnings
     warnings.warn('Griddly has been segfaulting in the latest build and we do not know why. Submit a PR if you find a fix!')
     pufferlib.environments.try_import('griddly')
-    with pufferlib.utils.Suppress():
+    with pufferlib.Suppress():
         env = gym.make(name)
         env.reset() # Populate observation space
 

@@ -8,7 +8,6 @@ import shimmy
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.utils
 
 
 def env_creator(name='SlimeVolley-v0'):

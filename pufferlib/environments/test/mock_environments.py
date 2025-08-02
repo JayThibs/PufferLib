@@ -11,7 +11,6 @@ from pettingzoo.utils.env import ParallelEnv
 
 import pufferlib
 import pufferlib.emulation
-import pufferlib.utils
 
 
 HIGH = 100
@@ -99,7 +98,8 @@ class GymnasiumTestEnv(gym.Env):
 
     def reset(self, seed=None):
         self.tick = 0
-        self.rng = pufferlib.utils.RandomState(seed)
+        if seed is not None:
+            np.random.seed(seed)
 
         ob = _sample_space('agent_1', self.tick, self.observation_space)
         return ob, {}
@@ -162,7 +162,7 @@ class TestEnv(ParallelEnv):
         for spawn in range(self.spawn_per_tick):
             # TODO: Make pufferlib check if an agent respawns on the
             # Same tick as it dies (is this good or bad?)
-            spawn = self.rng.choice(self.possible_agents)
+            spawn = np.random.choice(self.possible_agents)
             if spawn not in self.agents + dead:
                 self.agents.append(spawn)
 

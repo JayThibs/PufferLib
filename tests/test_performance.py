@@ -6,7 +6,6 @@ import random
 import sys
 
 import pufferlib
-import pufferlib.utils
 import pufferlib.exceptions
 import pufferlib.emulation
 import pufferlib.environments
@@ -151,7 +150,7 @@ def profile_gymnasium_vec(env_creator, num_envs, timeout=DEFAULT_TIMEOUT):
     return sps
 
 def profile_sb3_vec(env_creator, num_envs, timeout=DEFAULT_TIMEOUT):
-    with pufferlib.utils.Suppress():
+    with pufferlib.Suppress():
         from stable_baselines3.common.vec_env import SubprocVecEnv
         vecenv = SubprocVecEnv([env_creator] * num_envs)
         actions = [[vecenv.action_space.sample() for _ in range(num_envs)]

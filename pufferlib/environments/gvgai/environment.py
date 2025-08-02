@@ -7,8 +7,6 @@ import gym
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.utils
-import pufferlib.wrappers
 
 def env_creator(name='zelda'):
     if name == 'zelda':
@@ -20,7 +18,7 @@ def make(name, obs_type='grayscale', frameskip=4, full_action_space=False,
     '''Atari creation function'''
     pufferlib.environments.try_import('gym_gvgai')
     env = gym.make(name)
-    env = pufferlib.wrappers.GymToGymnasium(env)
+    env = pufferlib.GymToGymnasium(env)
     env = pufferlib.EpisodeStats(env)
     env = pufferlib.emulation.GymnasiumPufferEnv(env=env, buf=buf)
     return env

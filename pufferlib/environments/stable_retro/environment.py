@@ -22,7 +22,7 @@ def make(name='Airstriker-Genesis', framestack=4, buf=None):
         FireResetEnv,
         MaxAndSkipEnv,
     )
-    with pufferlib.utils.Suppress():
+    with pufferlib.Suppress():
         env = retro.make(name)
 
     env = gym.wrappers.RecordEpisodeStatistics(env)

@@ -4,7 +4,6 @@ import functools
 
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.wrappers
 
 
 def env_creator(name='battle_v4'):
@@ -21,5 +20,5 @@ def make(name, buf=None):
  
     env = env_cls()
     env = aec_to_parallel_wrapper(env)
-    env = pufferlib.wrappers.PettingZooTruncatedWrapper(env)
+    env = pufferlib.PettingZooTruncatedWrapper(env)
     return pufferlib.emulation.PettingZooPufferEnv(env=env, buf=buf)

@@ -8,7 +8,6 @@ import functools
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.utils
 
 
 class TransposeObs(gym.Wrapper):
@@ -25,7 +24,7 @@ def make(name, buf=None):
 
     pufferlib.environments.try_import('crafter')
     env = gym.make(name)
-    env.reset = pufferlib.utils.silence_warnings(env.reset)
+    env.reset = pufferlib.silence_warnings(env.reset)
     env = shimmy.GymV21CompatibilityV0(env=env)
     env = RenderWrapper(env)
     env = TransposeObs(env)

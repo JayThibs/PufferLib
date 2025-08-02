@@ -5,7 +5,6 @@ import functools
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.wrappers
 
 
 def env_creator(name='nmmo'):

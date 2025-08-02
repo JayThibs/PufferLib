@@ -3,7 +3,6 @@ import functools
 import pufferlib
 import pufferlib.emulation
 import pufferlib.environments
-import pufferlib.wrappers
 
 
 def env_creator(name='smac'):
@@ -18,6 +17,6 @@ def make(name, buf=None):
     from smac.env.pettingzoo.StarCraft2PZEnv import _parallel_env as smac_env
 
     env = smac_env(1000)
-    env = pufferlib.wrappers.PettingZooTruncatedWrapper(env)
+    env = pufferlib.PettingZooTruncatedWrapper(env)
     env = pufferlib.emulation.PettingZooPufferEnv(env, buf=buf)
     return env
